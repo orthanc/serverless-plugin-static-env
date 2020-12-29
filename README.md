@@ -2,39 +2,21 @@
 [![npm version](https://badge.fury.io/js/serverless-plugin-embedded-env-in-code.svg)](https://badge.fury.io/js/serverless-plugin-embedded-env-in-code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-# Embedded env in Code
-## ServerlessFramework Plugin
+# Static Env ServerlessFramework Plugin
 
-This plugin will replace environment variables with static strings before deployment.
-It’s for Lambda@Edge.
+This plugin is is intended for use with Lambda@Edge to replace `process.env` and other
+similar mechanisms referencing environment variables with static values so that environment
+specific configuration can be used in Lambda@Edge (which does not support environment variables).
 
-## Usage
+This is forked from [serverless-plugin-embedded-env-in-code](https://github.com/zaru/serverless-plugin-embedded-env-in-code)
+with the intention of taking a slightly different approach to the same problem.
 
-`serverless.yml`
+This is work in progress, if you're looking for a working solution use [serverless-plugin-embedded-env-in-code](https://github.com/zaru/serverless-plugin-embedded-env-in-code).
 
-```yaml
-functions:
-  foobar:
-    handler: foobar.perform
-    embedded:
-      files:
-        - foobar.js
-        - foobar-lib.js
-      variables:
-        FooBar: somethingA
-        BarBaz: somethingB
-```
+## Approach Difference
 
-For example
+Rather than using string substution, the intent is to load the module and replace it with a static version of it's exports using
+the built in serverless environment options.
 
-```javascript
-const foobar = process.env.FooBar
-const barbaz = `${process.env.BarBaz} <= barbaz`
-```
-
-replaces
-
-```javascript
-const foobar = 'somethingA'
-const barbaz = `somethingB <= barbaz`
-```
+The idea is this will provide a more consistent flow with other lambdas (specifying environment on the provider or function)
+and also allow less constraints on the configuration file.

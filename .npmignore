@@ -1,0 +1,6 @@
+.nvmrc
+.prettierignore
+commitlint.config.js
+.huskyrc.json
+.prettierrc.json
+.vscode/settings.json

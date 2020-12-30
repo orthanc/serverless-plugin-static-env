@@ -1,5 +1,5 @@
 {
-  "name": "serverless-plugin-embedded-env-in-code",
+  "name": "serverless-plugin-static-env",
   "version": "0.1.0",
   "description": "Replace environment variables with static strings before deployment. It is for Lambda @ Edge.",
   "main": "index.js",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/zaru/serverless-plugin-embedded-env-in-code.git"
+    "url": "git+ssh://git@github.com/orthanc/serverless-plugin-static-env.git"
   },
   "keywords": [
     "serverless",
@@ -16,10 +16,10 @@
     "edge",
     "env"
   ],
-  "author": "zaru",
+  "author": "orthanc",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/zaru/serverless-plugin-embedded-env-in-code/issues"
+    "url": "https://github.com/orthanc/serverless-plugin-static-env/issues"
   },
-  "homepage": "https://github.com/zaru/serverless-plugin-embedded-env-in-code#readme"
+  "homepage": "https://github.com/orthanc/serverless-plugin-static-env#readme"
 }

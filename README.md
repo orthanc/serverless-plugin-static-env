@@ -1,5 +1,5 @@
 [![serverless](http://public.serverless.com/badges/v3.svg)](http://www.serverless.com)
-[![npm version](https://badge.fury.io/js/serverless-plugin-embedded-env-in-code.svg)](https://badge.fury.io/js/serverless-plugin-embedded-env-in-code)
+[![npm version](https://badge.fury.io/js/serverless-plugin-static-env.svg)](https://badge.fury.io/js/serverless-plugin-static-env)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # Static Env ServerlessFramework Plugin

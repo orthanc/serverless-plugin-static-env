@@ -1,9 +1,4 @@
-.nvmrc
-.prettierignore
-.eslintrc.json
-commitlint.config.js
-.huskyrc.json
-.prettierrc.json
-.vscode/*
-tsconfig.json
-src/*
+/*
+!/dist/*
+!/README.md
+!/package.json

@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "lint": "eslint ."
+    "lint": "eslint src"
   },
   "repository": {
     "type": "git",

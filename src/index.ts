@@ -21,11 +21,13 @@ interface ServiceWithFunctions extends Service {
 
 class ServerlessPlugin implements Plugin {
   hooks: Plugin.Hooks;
-  private serverless: Serverless;
+  private serverless: Serverless & { service: ServiceWithFunctions };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(serverless: Serverless, options: Record<string, unknown>) {
-    this.serverless = serverless;
+    this.serverless = serverless as Serverless & {
+      service: ServiceWithFunctions;
+    };
     // this.options = options;
     this.hooks = {
       'package:initialize': this.beforeBuild.bind(this),
@@ -33,15 +35,40 @@ class ServerlessPlugin implements Plugin {
     };
   }
 
-  async beforeBuild(): Promise<void> {
-    const service = this.serverless.service as ServiceWithFunctions;
+  _filesToBackup(): Array<string> {
+    return Object.values(this.serverless.service.functions)
+      .map((func) => {
+        const embedded = func.embedded;
+        return embedded ? embedded.files : [];
+      })
+      .reduce((acc, files) => acc.concat(...files), []);
+  }
+
+  async _backupFiles(): Promise<void> {
     await Promise.all(
-      Object.values(service.functions).map(async (func) => {
+      this._filesToBackup().map(async (file) => {
+        await copyFile(`${file}`, `${file}.org`);
+      })
+    );
+  }
+
+  async _restoreBackups(): Promise<void> {
+    await Promise.all(
+      this._filesToBackup().map(async (file) => {
+        copyFile(`${file}.org`, file);
+        unlink(`${file}.org`);
+      })
+    );
+  }
+
+  async beforeBuild(): Promise<void> {
+    await this._backupFiles();
+    await Promise.all(
+      Object.values(this.serverless.service.functions).map(async (func) => {
         const embedded = func.embedded;
         if (embedded) {
           await Promise.all(
             embedded.files.map(async (file) => {
-              await copyFile(`${file}`, `${file}.org`);
               let result = await readFile(file, 'utf8');
               Object.entries(embedded.variables).forEach(([k2, val]) => {
                 result = result.replace(
@@ -62,20 +89,7 @@ class ServerlessPlugin implements Plugin {
   }
 
   async afterBuild(): Promise<void> {
-    const service = this.serverless.service as ServiceWithFunctions;
-    await Promise.all(
-      Object.values(service.functions).map(async (func) => {
-        const embedded = func.embedded;
-        if (embedded) {
-          await Promise.all(
-            embedded.files.map(async (file) => {
-              copyFile(`${file}.org`, file);
-              unlink(`${file}.org`);
-            })
-          );
-        }
-      })
-    );
+    await this._restoreBackups();
   }
 }
 

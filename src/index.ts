@@ -12,12 +12,20 @@ const unlink = promisify(fs.unlink);
 interface FunctionDefinition {
   embedded?: {
     files: Array<string>;
-    variables: Record<string, string>;
   };
+  environment?: Record<string, unknown>;
 }
-interface ServiceWithFunctions extends Service {
+type ServiceWithFunctions = Service & {
   functions: Record<string, FunctionDefinition>;
-}
+  provider: { environment?: Record<string, unknown> };
+};
+
+const toStringEnvironment = (env: Record<string, unknown> | undefined) =>
+  env
+    ? Object.fromEntries(
+        Object.entries(env).map(([key, val]) => [key, String(val)])
+      )
+    : {};
 
 class ServerlessPlugin implements Plugin {
   hooks: Plugin.Hooks;
@@ -63,14 +71,22 @@ class ServerlessPlugin implements Plugin {
 
   async beforeBuild(): Promise<void> {
     await this._backupFiles();
+
+    const serviceEnvironment = toStringEnvironment(
+      this.serverless.service.provider.environment
+    );
     await Promise.all(
       Object.values(this.serverless.service.functions).map(async (func) => {
         const embedded = func.embedded;
         if (embedded) {
+          const functionEnvironment = {
+            ...serviceEnvironment,
+            ...toStringEnvironment(func.environment),
+          };
           await Promise.all(
             embedded.files.map(async (file) => {
               let result = await readFile(file, 'utf8');
-              Object.entries(embedded.variables).forEach(([k2, val]) => {
+              Object.entries(functionEnvironment).forEach(([k2, val]) => {
                 result = result.replace(
                   new RegExp('\\${process.env.' + k2 + '}', 'g'),
                   val

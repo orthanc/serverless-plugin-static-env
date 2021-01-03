@@ -10,10 +10,9 @@ const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 
 interface FunctionDefinition {
-  embedded?: {
-    files: Array<string>;
-  };
+  embedded?: boolean;
   environment?: Record<string, unknown>;
+  handler: string;
 }
 type ServiceWithFunctions = Service & {
   functions: Record<string, FunctionDefinition>;
@@ -26,6 +25,33 @@ const toStringEnvironment = (env: Record<string, unknown> | undefined) =>
         Object.entries(env).map(([key, val]) => [key, String(val)])
       )
     : {};
+
+const getHandlerBaseFilePath = (func: FunctionDefinition): string =>
+  func.handler.substring(0, func.handler.lastIndexOf('.'));
+
+const getHandlerFilePath = (func: FunctionDefinition): string =>
+  `${getHandlerBaseFilePath(func)}.js`;
+
+const getEnvFilePath = (func: FunctionDefinition): string =>
+  `${getHandlerBaseFilePath(func)}-env.js`;
+
+const getEnvFileRequire = (func: FunctionDefinition): string => {
+  const baseFilePath = getHandlerBaseFilePath(func);
+  const lastSlash = baseFilePath.lastIndexOf('/');
+  const baseName =
+    lastSlash === -1 ? baseFilePath : baseFilePath.substring(lastSlash + 1);
+  return `./${baseName}-env`;
+};
+
+const buildEnvFile = (env: Record<string, string>): string =>
+  Object.entries(env)
+    .map(
+      ([key, value]) =>
+        `process.env.${key} = process.env.${key} == null ? ${JSON.stringify(
+          value
+        )}: process.env.${key};`
+    )
+    .reduce((buff, line) => buff + line + '\n', '');
 
 class ServerlessPlugin implements Plugin {
   hooks: Plugin.Hooks;
@@ -47,7 +73,7 @@ class ServerlessPlugin implements Plugin {
     return Object.values(this.serverless.service.functions)
       .map((func) => {
         const embedded = func.embedded;
-        return embedded ? embedded.files : [];
+        return embedded ? [getHandlerFilePath(func)] : [];
       })
       .reduce((acc, files) => acc.concat(...files), []);
   }
@@ -69,6 +95,20 @@ class ServerlessPlugin implements Plugin {
     );
   }
 
+  async _deleteEnvFiles(): Promise<void> {
+    await Promise.all(
+      Object.values(this.serverless.service.functions)
+        .map((func) => {
+          const embedded = func.embedded;
+          return embedded ? [getEnvFilePath(func)] : [];
+        })
+        .reduce((acc, files) => acc.concat(...files), [])
+        .map(async (file) => {
+          unlink(file);
+        })
+    );
+  }
+
   async beforeBuild(): Promise<void> {
     await this._backupFiles();
 
@@ -83,21 +123,17 @@ class ServerlessPlugin implements Plugin {
             ...serviceEnvironment,
             ...toStringEnvironment(func.environment),
           };
-          await Promise.all(
-            embedded.files.map(async (file) => {
-              let result = await readFile(file, 'utf8');
-              Object.entries(functionEnvironment).forEach(([k2, val]) => {
-                result = result.replace(
-                  new RegExp('\\${process.env.' + k2 + '}', 'g'),
-                  val
-                );
-                result = result.replace(
-                  new RegExp('process.env.' + k2, 'g'),
-                  `'${val}'`
-                );
-              });
-              await writeFile(file, result, 'utf8');
-            })
+          const envFile = getEnvFilePath(func);
+          await writeFile(envFile, buildEnvFile(functionEnvironment), 'utf8');
+
+          const handlerPath = getHandlerFilePath(func);
+          const handlerSource = await readFile(handlerPath, 'utf8');
+          await writeFile(
+            handlerPath,
+            `require(${JSON.stringify(
+              getEnvFileRequire(func)
+            )});\n${handlerSource}`,
+            'utf8'
           );
         }
       })
@@ -106,6 +142,7 @@ class ServerlessPlugin implements Plugin {
 
   async afterBuild(): Promise<void> {
     await this._restoreBackups();
+    await this._deleteEnvFiles();
   }
 }
 

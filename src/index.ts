@@ -55,12 +55,12 @@ const shouldAddStaticEnv = (func: FunctionDefinition): boolean => {
 
 const buildEnvFile = (env: Record<string, string>): string =>
   Object.entries(env)
-    .map(
-      ([key, value]) =>
-        `process.env.${key} = process.env.${key} == null ? ${JSON.stringify(
-          value
-        )}: process.env.${key};`
-    )
+
+    .map(([key, value]) => [
+      `process.env[${JSON.stringify(key)}]`,
+      JSON.stringify(value),
+    ])
+    .map(([key, value]) => `${key} = ${key} == null ? ${value}: ${key};`)
     .reduce((buff, line) => buff + line + '\n', '');
 
 class ServerlessPlugin implements Plugin {

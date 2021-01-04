@@ -10,9 +10,10 @@ const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 
 interface FunctionDefinition {
-  embedded?: boolean;
+  includeStaticEnv?: boolean;
   environment?: Record<string, unknown>;
   handler: string;
+  events?: Array<Record<string, unknown>>;
 }
 type ServiceWithFunctions = Service & {
   functions: Record<string, FunctionDefinition>;
@@ -43,6 +44,15 @@ const getEnvFileRequire = (func: FunctionDefinition): string => {
   return `./${baseName}-env`;
 };
 
+const shouldAddStaticEnv = (func: FunctionDefinition): boolean => {
+  if (func.includeStaticEnv != null) return func.includeStaticEnv;
+
+  const cloudFrontEvent = func.events?.find(
+    (event) => event.cloudFront != null
+  );
+  return cloudFrontEvent != null;
+};
+
 const buildEnvFile = (env: Record<string, string>): string =>
   Object.entries(env)
     .map(
@@ -71,10 +81,9 @@ class ServerlessPlugin implements Plugin {
 
   _filesToBackup(): Array<string> {
     return Object.values(this.serverless.service.functions)
-      .map((func) => {
-        const embedded = func.embedded;
-        return embedded ? [getHandlerFilePath(func)] : [];
-      })
+      .map((func) =>
+        shouldAddStaticEnv(func) ? [getHandlerFilePath(func)] : []
+      )
       .reduce((acc, files) => acc.concat(...files), []);
   }
 
@@ -98,10 +107,7 @@ class ServerlessPlugin implements Plugin {
   async _deleteEnvFiles(): Promise<void> {
     await Promise.all(
       Object.values(this.serverless.service.functions)
-        .map((func) => {
-          const embedded = func.embedded;
-          return embedded ? [getEnvFilePath(func)] : [];
-        })
+        .map((func) => (shouldAddStaticEnv(func) ? [getEnvFilePath(func)] : []))
         .reduce((acc, files) => acc.concat(...files), [])
         .map(async (file) => {
           unlink(file);
@@ -117,8 +123,7 @@ class ServerlessPlugin implements Plugin {
     );
     await Promise.all(
       Object.values(this.serverless.service.functions).map(async (func) => {
-        const embedded = func.embedded;
-        if (embedded) {
+        if (shouldAddStaticEnv(func)) {
           const functionEnvironment = {
             ...serviceEnvironment,
             ...toStringEnvironment(func.environment),

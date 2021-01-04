@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "lint": "eslint src",
-    "release": "semantic-release -d"
+    "release": "semantic-release"
   },
   "repository": {
     "type": "git",

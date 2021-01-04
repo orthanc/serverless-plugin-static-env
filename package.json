@@ -1,6 +1,6 @@
 {
   "name": "serverless-plugin-static-env",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0",
   "description": "Replace environment variables with static strings before deployment. It is for Lambda @ Edge.",
   "main": "dist/index.js",
   "scripts": {

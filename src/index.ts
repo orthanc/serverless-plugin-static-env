@@ -98,7 +98,7 @@ class ServerlessPlugin implements Plugin {
   async _restoreBackups(): Promise<void> {
     await Promise.all(
       this._filesToBackup().map(async (file) => {
-        copyFile(`${file}.org`, file);
+        await copyFile(`${file}.org`, file);
         unlink(`${file}.org`);
       })
     );
